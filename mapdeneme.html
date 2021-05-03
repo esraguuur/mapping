@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Türkiye Kullanıcılar- Kodris</title>
+
+    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+</head>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<style>
+    #map {
+        height: 800px;
+        width: 1800px;
+
+    }
+
+    .info {
+        padding: 6px 8px;
+        font: 18px/16px Arial, Helvetica, sans-serif;
+        background: white;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+    }
+
+    .info h4 {
+        margin: 0 0 5px;
+        color: #777;
+    }
+
+    .legend {
+        line-height: 18px;
+        color: #555;
+    }
+
+    .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.7;
+    }
+
+    .text-labels {
+        font-size: 20px;
+        font-weight: 20px;
+        color: black;
+        /* Use color, background, set margins for offset, etc */
+    }
+</style>
+
+<body>
+    <div id="map"></div>
+</body>
+<script src="turkey-cities.js"></script>
+<script>
+    var map = L.map('map').setView([38.963745, 35.243322], 7);
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+        id: 'mapbox/light-v9',
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        tileSize: 512,
+        zoomOffset: -1,
+        accessToken: 'pk.eyJ1IjoiZ3VyaGVzcmEiLCJhIjoiY2tsYzNpMjNzMDRkOTJ2bXA5aDhrcnZqdCJ9.S96kswUx953YqFJWqvT3Lg'
+    }).addTo(map);
+
+    function getColor(d) {
+        return d > 600 ? '#800026' :
+            d > 500 ? '#BD0026' :
+            d > 400 ? '#E31A1C' :
+            d > 300 ? '#FC4E2A' :
+            d > 200 ? '#FD8D3C' :
+            d > 100 ? '#FEB24C' :
+            d > 50 ? '#FED976' :
+            '#646464';
+    }
+    function style(feature) {
+        return {
+            fillColor: getColor(feature.properties.sayi),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.5
+        };
+    }
+
+    L.geoJson(statesData, {
+        style: style
+    }).addTo(map);
+
+
+
+    function highlightFeature(e) {
+        var layer = e.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+            layer.bringToFront();
+        }
+        info.update(layer.feature.properties);
+    }
+
+    function zoomToFeature(e) {
+        map.fitBounds(e.target.getBounds());
+    }
+
+    function resetHighlight(e) {
+        geojson.resetStyle(e.target);
+        info.update();
+    }
+
+    function onEachFeature(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight,
+            click: zoomToFeature
+        });
+    }
+
+    geojson = L.geoJson(statesData, {
+        style: style,
+        onEachFeature: onEachFeature
+    }).addTo(map);
+
+    $(function () {
+        $.getJSON('cities.js', function (data) {
+            console.log(data.cities.length)
+            for (var i = 0; i < data.cities.length; i++) {
+                var obj = data.cities[i];
+                var textLatLng = [data.cities[i].enlem, data.cities[i].boylam];
+                var myTextLabel = L.marker(textLatLng, {
+                    icon: L.divIcon({
+                        className: 'text-labels',
+                        html: data.cities[i].sayi
+                    }),
+                    zIndexOffset: 1000
+                });
+                map.addLayer(myTextLabel);
+            };
+
+        });
+
+    });
+
+    var info = L.control();
+
+    info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info');
+        this.update();
+        return this._div;
+    };
+
+    info.update = function (props) {
+        this._div.innerHTML = '<h4>Kodris Kullanıcı sayıları</h4>' + (props ?
+            '<b>' + props.name + '</b><br />' + props.sayi + ' Aktif kullanıcı bulunmaktadır' :
+            'Kullanıcı sayısını öğrenmek istediğiniz şehrin üstüne geliniz');
+            
+    };
+
+    info.addTo(map);
+
+    var legend = L.control({
+        position: 'bottomright'
+    });
+
+    legend.onAdd = function (map) {
+
+        var div = L.DomUtil.create('div', 'info legend'),
+            grades = [0, 10, 20, 30, 40, 50, 60, 75],
+            labels = [];
+        for (var i = 0; i < grades.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+                grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+        }
+
+        return div;
+    };
+    legend.addTo(map);
+</script>
+
+
+</html>
